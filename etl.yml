@@ -1,0 +1,37 @@
+name: CEPEA ETL Daily
+
+on:
+  schedule:
+    - cron: '30 21 * * *'  # 21:30 UTC ~= 18:30 BRT
+  workflow_dispatch: {}
+
+jobs:
+  run-etl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: ETL - Extract
+        env:
+          ETL_DATE_FROM: ""
+          ETL_DATE_TO: ""
+        run: |
+          python etl/extract_cepea_consultas.py
+
+      - name: ETL - Load
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python etl/load_normalize.py
